@@ -1,0 +1,12 @@
+node_modules
+dist
+dev-dist
+.vite
+coverage
+.pnpm-store
+.agents
+*.local
+*.log
+.DS_Store
+.tools
+.tools-download
