@@ -8,6 +8,7 @@ export interface ArticleBlock {
   id: string
   type: 'heading' | 'paragraph' | 'quote'
   text: string
+  translationZh?: string
 }
 
 export interface Article {

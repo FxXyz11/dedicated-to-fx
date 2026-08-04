@@ -368,7 +368,7 @@ export async function exportArchive(): Promise<LearningArchive> {
   const archive: LearningArchive = {
     format: 'dedicated-to-fx-backup',
     schemaVersion: 3,
-    appVersion: '0.5.0',
+    appVersion: '0.6.0',
     exportedAt: now(),
     data: {
       progress: await db.articleProgress.toArray(),
@@ -442,6 +442,8 @@ function isImportedArticle(value: unknown): value is Article {
       typeof candidateBlock.id === 'string' &&
       typeof candidateBlock.text === 'string' &&
       candidateBlock.text.length <= 60_000 &&
+      (candidateBlock.translationZh === undefined ||
+        (typeof candidateBlock.translationZh === 'string' && candidateBlock.translationZh.length <= 60_000)) &&
       ['paragraph', 'heading', 'quote'].includes(String(candidateBlock.type))
     )
   })

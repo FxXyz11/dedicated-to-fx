@@ -106,7 +106,16 @@ LearningUnit 1 ─── n RelatedContext
 | installedAt | ISODate | 本地安装时间 |
 | updatedAt | ISODate | 本地内容更新时间 |
 
-ArticleBlock 至少包含 id、type 和 text。MVP 的 type 支持 paragraph、heading、quote；不把整篇文章存成不可定位的单一 HTML 字符串。
+ArticleBlock 至少包含 id、type 和 text，并可包含 translationZh。MVP 的 type 支持 paragraph、heading、quote；不把整篇文章存成不可定位的单一 HTML 字符串。
+
+| ArticleBlock 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 文章内稳定块 ID |
+| type | paragraph / heading / quote | 受控正文块类型 |
+| text | string | 英文原文 |
+| translationZh | string? | 与当前英文块一一对应的中文译文；不能替代 LearningUnit 的当前语境中文辅助 |
+
+内置文章的每个正文块必须提供 translationZh。本地导入允许省略；一旦提供，导入校验必须保证英文块与中文块数量一致，且备份恢复时将该字段视为不可信文本一并校验。
 
 ### 4.2 ArticleProgress
 

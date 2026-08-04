@@ -3,6 +3,7 @@ import type { Article } from './models'
 export interface ArticleImportDraft {
   title: string
   text: string
+  translationZh?: string
   summary?: string
   topic?: string
   difficulty?: Article['difficulty']
@@ -14,6 +15,13 @@ export type ArticleImportResult =
   | { ok: false; error: string }
 
 const englishWords = (text: string) => text.match(/[A-Za-z]+(?:[’'-][A-Za-z]+)*/g) ?? []
+
+function toParagraphs(text: string) {
+  return text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/[ \t]+/g, ' ').replace(/\n/g, ' ').trim())
+    .filter(Boolean)
+}
 
 function createSummary(text: string) {
   const firstParagraph = text.split(/\n\s*\n/)[0]?.replace(/\s+/g, ' ').trim() ?? ''
@@ -28,11 +36,13 @@ export function prepareImportedArticle(
 ): ArticleImportResult {
   const title = draft.title.trim()
   const text = draft.text.replace(/\r\n?/g, '\n').trim()
+  const translationZh = draft.translationZh?.replace(/\r\n?/g, '\n').trim() ?? ''
 
   if (!title) return { ok: false, error: '请先填写英文标题。' }
   if (title.length > 120) return { ok: false, error: '标题请控制在 120 个字符以内。' }
   if (!text) return { ok: false, error: '请粘贴英文正文。' }
   if (text.length > 60_000) return { ok: false, error: '单篇文章请控制在 60,000 个字符以内。' }
+  if (translationZh.length > 60_000) return { ok: false, error: '中文译文请控制在 60,000 个字符以内。' }
   if (/<[a-z][\s\S]*>/i.test(text)) {
     return { ok: false, error: '请粘贴纯文本，不要粘贴 HTML 代码。' }
   }
@@ -44,10 +54,14 @@ export function prepareImportedArticle(
     return { ok: false, error: '这段内容主要是中文。当前版本只能直接导入英文文章。' }
   }
 
-  const paragraphs = text
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.replace(/[ \t]+/g, ' ').replace(/\n/g, ' ').trim())
-    .filter(Boolean)
+  const paragraphs = toParagraphs(text)
+  const translatedParagraphs = translationZh ? toParagraphs(translationZh) : []
+  if (translatedParagraphs.length && translatedParagraphs.length !== paragraphs.length) {
+    return {
+      ok: false,
+      error: `英文正文有 ${paragraphs.length} 段，中文译文有 ${translatedParagraphs.length} 段。请用空行分段并保持一一对应。`,
+    }
+  }
 
   const accentIndex = [...title].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 3
   const accents: Article['accent'][] = ['moss', 'clay', 'ink']
@@ -72,6 +86,7 @@ export function prepareImportedArticle(
         id: `${metadata.id}-p${index + 1}`,
         type: 'paragraph',
         text: paragraph,
+        translationZh: translatedParagraphs[index] || undefined,
       })),
       featuredExpressionIds: [],
       accent: accents[accentIndex],

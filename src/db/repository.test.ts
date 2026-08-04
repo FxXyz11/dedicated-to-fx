@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { prepareImportedArticle } from '../domain/article-import'
 import { isLearningArchive } from './repository'
 
 describe('backup validation', () => {
@@ -78,5 +79,40 @@ describe('backup validation', () => {
         },
       }),
     ).toBe(false)
+  })
+
+  it('validates imported bilingual text in version 3 backups', () => {
+    const result = prepareImportedArticle(
+      {
+        title: 'A Small Test',
+        text: 'A complete English paragraph with enough words to be accepted by the local importer and stored safely for reading today.',
+        translationZh: '这是一段与英文原文对应的完整中文译文。',
+      },
+      { id: 'imported-backup-test', importedAt: '2026-08-04T00:00:00.000Z' },
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const archive = {
+      format: 'dedicated-to-fx-backup',
+      schemaVersion: 3,
+      appVersion: '0.6.0',
+      exportedAt: '2026-08-04T00:00:00.000Z',
+      data: {
+        progress: [], encounters: [], sessions: [], attempts: [], summaries: [], settings: [],
+        journalEntries: [], habits: [], habitCompletions: [], plans: [],
+        importedArticles: [result.article],
+      },
+    }
+    expect(isLearningArchive(archive)).toBe(true)
+
+    const invalidArticle = {
+      ...result.article,
+      blocks: [{ ...result.article.blocks[0], translationZh: 42 }],
+    }
+    expect(isLearningArchive({
+      ...archive,
+      data: { ...archive.data, importedArticles: [invalidArticle] },
+    })).toBe(false)
   })
 })

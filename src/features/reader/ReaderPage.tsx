@@ -6,7 +6,7 @@ import {
   useState,
 } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookOpenCheck, ChevronRight, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowLeft, BookOpenCheck, ChevronDown, ChevronRight, Languages, SlidersHorizontal, X } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PronunciationControls } from '../../components/ui/PronunciationControls'
 import { lookupDictionaryEntry } from '../../dictionary/dictionary-service'
@@ -26,6 +26,44 @@ interface Selection {
   text: string
   sentence: string
   unit?: LearningUnit
+}
+
+function BilingualReading({ blocks }: { blocks: ArticleBlock[] }) {
+  const hasCompleteTranslation = blocks.length > 0 && blocks.every((block) => Boolean(block.translationZh?.trim()))
+
+  return (
+    <section className="bilingual-reading" aria-labelledby="bilingual-title">
+      <details>
+        <summary>
+          <span className="bilingual-reading__icon"><Languages size={20} /></span>
+          <span>
+            <small>After reading · paragraph by paragraph</small>
+            <strong id="bilingual-title">全文中英对照</strong>
+          </span>
+          <ChevronDown className="bilingual-reading__chevron" size={20} />
+        </summary>
+        {hasCompleteTranslation ? (
+          <div className="bilingual-reading__pairs">
+            <p className="bilingual-reading__intro">先完成英文阅读，再用中文校准理解。每一组英文与中文保持同一段落对应。</p>
+            {blocks.map((block, index) => (
+              <article className="bilingual-pair" key={block.id}>
+                <span className="bilingual-pair__number">{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <p className="bilingual-pair__english" lang="en">{block.text}</p>
+                  <p className="bilingual-pair__chinese" lang="zh-CN">{block.translationZh}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="bilingual-reading__empty">
+            <p>这篇本地文章还没有对应的中文译文。</p>
+            <small>网站不会在没有翻译模型或人工校对的情况下编造整篇中文。重新导入时可粘贴逐段对应的中文译文。</small>
+          </div>
+        )}
+      </details>
+    </section>
+  )
 }
 
 function sentenceAt(text: string, index: number) {
@@ -361,6 +399,7 @@ export function ReaderPage() {
             </p>
           ))}
         </div>
+        <BilingualReading blocks={article.blocks} />
         <footer className="reading-finish">
           <BookOpenCheck size={28} strokeWidth={1.4} />
           <p className="eyebrow">End of the essay</p>

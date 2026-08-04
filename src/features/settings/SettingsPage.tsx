@@ -183,7 +183,7 @@ export function SettingsPage() {
 
       <footer className="settings-footer">
         <span className="wordmark__seal">Fx</span>
-        <p>Dedicated to Fx · Version 0.5<br />No account. No tracking. No API key.</p>
+        <p>Dedicated to Fx · Version 0.6<br />No account. No tracking. No API key.</p>
       </footer>
     </div>
   )

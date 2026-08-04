@@ -21,6 +21,7 @@ export function ImportArticlePage() {
   const [difficulty, setDifficulty] = useState<Article['difficulty']>('Gentle')
   const [source, setSource] = useState('')
   const [text, setText] = useState('')
+  const [translationZh, setTranslationZh] = useState('')
   const [chineseText, setChineseText] = useState('')
   const [message, setMessage] = useState<string>()
   const [importedId, setImportedId] = useState<string>()
@@ -30,13 +31,21 @@ export function ImportArticlePage() {
     () => (text.match(/[A-Za-z]+(?:[’'-][A-Za-z]+)*/g) ?? []).length,
     [text],
   )
+  const englishParagraphCount = useMemo(
+    () => text.trim() ? text.trim().split(/\n\s*\n/).filter((item) => item.trim()).length : 0,
+    [text],
+  )
+  const chineseParagraphCount = useMemo(
+    () => translationZh.trim() ? translationZh.trim().split(/\n\s*\n/).filter((item) => item.trim()).length : 0,
+    [translationZh],
+  )
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setBusy(true)
     setImportedId(undefined)
     try {
-      const result = await importArticle({ title, summary, topic, difficulty, source, text })
+      const result = await importArticle({ title, summary, topic, difficulty, source, text, translationZh })
       if (!result.ok) {
         setMessage(result.error)
         return
@@ -104,8 +113,25 @@ export function ImportArticlePage() {
             </div>
             <label className="visually-hidden" htmlFor="article-text">英文正文</label>
             <textarea id="article-text" value={text} maxLength={60000} placeholder={'Paste the complete English article here.\n\nUse a blank line between paragraphs.'} onChange={(event) => setText(event.target.value)} />
+            <div className="import-translation-field">
+              <div className="section-heading">
+                <div><p className="eyebrow">Aligned Chinese text · optional</p><h2>对应中文译文</h2></div>
+                <span className={chineseParagraphCount && chineseParagraphCount !== englishParagraphCount ? 'word-count is-warning' : 'word-count'}>
+                  {chineseParagraphCount || 0} / {englishParagraphCount || 0} 段
+                </span>
+              </div>
+              <label className="visually-hidden" htmlFor="article-translation">对应中文译文</label>
+              <textarea
+                id="article-translation"
+                value={translationZh}
+                maxLength={60000}
+                placeholder={'粘贴整篇中文译文。\n\n请与英文使用相同的空行分段，这样才能逐段一一对应。'}
+                onChange={(event) => setTranslationZh(event.target.value)}
+              />
+              <p>这是可选项。填写时，中文段落数必须与英文一致；阅读页会把每组英文和中文排在一起。</p>
+            </div>
             <div className="import-guidance">
-              <p><strong>导入后可以：</strong>离线阅读、记录进度、点击单词播放英式/美式发音，并进入每日推荐。</p>
+              <p><strong>导入后可以：</strong>离线阅读、记录进度、点击单词播放英式/美式发音，并在文章末尾展开中英对照。</p>
               <p><strong>词典范围：</strong>普通单词会逐层显示基础英文释义与中文辅助；已策划表达还会提供当前语境和核心概念。姓名、拼写错误或极少见的专业词可能没有词条。</p>
               <p><strong>离线说明：</strong>词库按小块下载。某类单词联网查询过一次后会缓存到手机；尚未下载的词库在完全离线时暂时无法查询。</p>
             </div>

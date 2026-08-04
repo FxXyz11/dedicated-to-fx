@@ -32,4 +32,13 @@ describe('curated content library', () => {
       }
     }
   })
+
+  it('provides a paragraph-aligned Chinese translation for every curated article', () => {
+    for (const article of articles) {
+      expect(article.blocks.length, article.id).toBeGreaterThan(0)
+      for (const block of article.blocks) {
+        expect(block.translationZh?.trim(), `${article.id}:${block.id}`).toBeTruthy()
+      }
+    }
+  })
 })
