@@ -82,6 +82,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--clay);
   outline-offset: 3px;
@@ -612,7 +613,7 @@ h3 {
 .trace-item {
   display: grid;
   padding: 1.45rem 0;
-  grid-template-columns: minmax(110px, 0.25fr) 1fr;
+  grid-template-columns: minmax(110px, 0.25fr) 1fr 44px;
   gap: 1.4rem;
   border-bottom: 1px solid var(--line);
 }
@@ -634,6 +635,77 @@ h3 {
 .trace-item small {
   color: var(--ink-faint);
   font-size: 0.72rem;
+}
+
+.trace-delete {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  align-self: start;
+  color: var(--ink-faint);
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.trace-delete:hover,
+.trace-delete:focus-visible {
+  color: #9d4937;
+  border-color: rgba(157, 73, 55, 0.22);
+  background: rgba(157, 73, 55, 0.06);
+}
+
+.trace-confirm {
+  display: flex;
+  padding: 0.9rem 1rem;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(157, 73, 55, 0.18);
+  border-radius: 3px 14px 3px 14px;
+  background: rgba(239, 224, 216, 0.46);
+}
+
+.trace-confirm p {
+  display: grid;
+  margin: 0;
+  gap: 0.25rem;
+}
+
+.trace-confirm p strong {
+  color: #7d3a2c;
+  font-size: 0.78rem;
+}
+
+.trace-confirm p span {
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.trace-confirm > div {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.45rem;
+}
+
+.trace-confirm button {
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.trace-confirm button.is-danger {
+  color: #fffaf6;
+  border-color: #9d4937;
+  background: #9d4937;
 }
 
 .empty-note {
@@ -2413,6 +2485,13 @@ input[type="range"] {
   gap: 1rem;
 }
 
+.journal-entry__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .journal-entry h3 {
   margin-bottom: 1rem;
   color: var(--moss-deep);
@@ -2572,6 +2651,92 @@ input[type="range"] {
   color: var(--ink-soft);
   font-size: 0.82rem;
   line-height: 1.75;
+}
+
+.voice-settings {
+  margin: 1.6rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.voice-settings__intro {
+  display: flex;
+  padding: 1.15rem 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.voice-settings__intro > div,
+.voice-setting-grid label > span,
+.voice-rate > span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.voice-settings__intro strong,
+.voice-setting-grid strong,
+.voice-rate strong {
+  font-size: 0.84rem;
+}
+
+.voice-settings__intro small,
+.voice-setting-grid small,
+.voice-rate small,
+.voice-settings__intro > span {
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+}
+
+.voice-setting-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.voice-setting-grid label {
+  display: grid;
+  padding: 1rem;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 3px 16px 3px 16px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.voice-setting-grid select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  grid-column: 1 / -1;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px 10px 3px 10px;
+  background: var(--paper-light);
+}
+
+.voice-preview {
+  display: inline-flex;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--moss);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.voice-rate {
+  display: grid;
+  min-height: 78px;
+  padding: 1rem 0;
+  grid-template-columns: minmax(130px, 0.35fr) 1fr;
+  align-items: center;
+  gap: 1rem;
 }
 
 .settings-actions {
@@ -3003,8 +3168,20 @@ input[type="range"] {
   }
 
   .trace-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 44px;
     gap: 0.55rem;
+  }
+
+  .trace-item__content {
+    grid-column: 1 / -1;
+  }
+
+  .trace-confirm {
+    display: grid;
+  }
+
+  .trace-confirm > div {
+    justify-content: end;
   }
 
   .filter-row {
@@ -3160,6 +3337,18 @@ input[type="range"] {
   .range-setting {
     grid-template-columns: 1fr;
     gap: 0.6rem;
+  }
+
+  .voice-settings__intro {
+    align-items: start;
+  }
+
+  .voice-setting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-rate {
+    grid-template-columns: 1fr;
   }
 
   .settings-actions {

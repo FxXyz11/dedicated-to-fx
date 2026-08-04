@@ -1,4 +1,5 @@
 import type {
+  Encounter,
   EvidenceLevel,
   ExplorationSession,
   LearningSummary,
@@ -64,4 +65,47 @@ export function applyPracticeEvidence(
     transferUse: 'developing',
     latestEvidenceAt: attempt.attemptedAt,
   }
+}
+
+export function rebuildLearningSummary(
+  expressionConceptId: string,
+  encounters: Encounter[],
+  sessions: ExplorationSession[],
+  attempts: PracticeAttempt[],
+): LearningSummary | undefined {
+  const conceptEncounters = encounters
+    .filter((encounter) => encounter.expressionConceptId === expressionConceptId)
+    .sort((a, b) => a.encounteredAt.localeCompare(b.encounteredAt))
+  if (!conceptEncounters.length) return undefined
+
+  const encounterIds = new Set(conceptEncounters.map((encounter) => encounter.id))
+  const evidenceEvents = [
+    ...sessions
+      .filter((session) => encounterIds.has(session.encounterId) && session.rereadAt)
+      .map((session) => ({
+        at: session.rereadAt as string,
+        apply: (summary: LearningSummary) => applyRereadEvidence(summary, session),
+      })),
+    ...attempts
+      .filter((attempt) => encounterIds.has(attempt.encounterId))
+      .map((attempt) => ({
+        at: attempt.attemptedAt,
+        apply: (summary: LearningSummary) => applyPracticeEvidence(summary, attempt),
+      })),
+  ].sort((a, b) => a.at.localeCompare(b.at))
+
+  let summary = createLearningSummary(expressionConceptId, conceptEncounters[0].encounteredAt)
+  summary = {
+    ...summary,
+    encounterCount: conceptEncounters.length,
+    explorationCount: conceptEncounters.length,
+  }
+  for (const event of evidenceEvents) summary = event.apply(summary)
+
+  const latestEvidenceAt = [
+    ...conceptEncounters.map((encounter) => encounter.encounteredAt),
+    ...evidenceEvents.map((event) => event.at),
+  ].sort().at(-1) as string
+
+  return { ...summary, latestEvidenceAt }
 }

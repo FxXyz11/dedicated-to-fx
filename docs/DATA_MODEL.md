@@ -334,6 +334,9 @@ MVP 无服务端或 AI 评分。自由回答采用参考要点、自评与可选
 | textScale | number | 正文缩放 |
 | lineHeight | number | 行高偏好 |
 | reduceMotion | boolean | 减少动效 |
+| pronunciationVoiceGb | string? | 当前设备上选定的英式系统声音 voiceURI |
+| pronunciationVoiceUs | string? | 当前设备上选定的美式系统声音 voiceURI |
+| pronunciationRate | number? | 系统发音语速，默认 0.96，限制在安全范围内 |
 | dailyReadingMinutes | number | 温和的阅读目标 |
 | lastBackupAt | ISODate? | 最近成功导出 |
 | backupReminderDismissedAt | ISODate? | 备份提醒状态 |
@@ -483,6 +486,7 @@ MVP 明确提供两种模式：
 
 - 删除一篇已下载文章时，默认只移除可重新获取的正文缓存，不删除 Encounter 和学习记录快照。
 - 删除某个学习记录需要展示影响范围。
+- 删除单条 Encounter 时，在同一事务中删除其 ExplorationSession 与 PracticeAttempt；若关联 ExpressionConcept，则从剩余 Encounter、Session 和 Attempt 重建 LearningSummary，没有剩余遇见时删除该摘要。
 - “清除全部数据”是破坏性操作，必须二次确认，并在执行前主动建议导出。
 - 不实现自动过期删除学习记录。
 

@@ -1,10 +1,17 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookMarked, Layers3, Quote, Sprout } from 'lucide-react'
+import { ArrowLeft, BookMarked, Layers3, Quote, Sprout, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { libraryRepository } from '../../db/repository'
+import { deleteUnderstandingTrace, libraryRepository } from '../../db/repository'
 import { evidenceLabels } from '../../domain/learning'
 
 export function LearningHistoryPage() {
+  const [pendingDeleteId, setPendingDeleteId] = useState<string>()
+  const deleteTrace = async (encounterId: string) => {
+    await deleteUnderstandingTrace(encounterId)
+    setPendingDeleteId(undefined)
+  }
+
   const data = useLiveQuery(async () => {
     const [encounters, sessions, summaries, progress] = await Promise.all([
       libraryRepository.listRecentEncounters(100),
@@ -61,8 +68,30 @@ export function LearningHistoryPage() {
                 <div className="journal-entry__paper">
                   <div className="journal-entry__header">
                     <div><p className="eyebrow">{article?.title ?? 'Unknown article'}</p><h3>{concept?.canonicalForm ?? encounter.selectedText}</h3></div>
-                    <span className="evidence-pill">{summary ? evidenceLabels[summary.evidenceLevel] : '个人记录'}</span>
+                    <div className="journal-entry__actions">
+                      <span className="evidence-pill">{summary ? evidenceLabels[summary.evidenceLevel] : '个人记录'}</span>
+                      <button
+                        className="trace-delete"
+                        type="button"
+                        aria-label={`删除理解痕迹：${concept?.canonicalForm ?? encounter.selectedText}`}
+                        aria-expanded={pendingDeleteId === encounter.id}
+                        onClick={() => setPendingDeleteId(
+                          pendingDeleteId === encounter.id ? undefined : encounter.id,
+                        )}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
+                  {pendingDeleteId === encounter.id && (
+                    <div className="trace-confirm" role="alert">
+                      <p><strong>删除这条理解痕迹？</strong><span>这一次的猜测、提示进度和练习也会删除，且无法恢复。</span></p>
+                      <div>
+                        <button type="button" onClick={() => setPendingDeleteId(undefined)}>保留</button>
+                        <button className="is-danger" type="button" onClick={() => void deleteTrace(encounter.id)}>确认删除</button>
+                      </div>
+                    </div>
+                  )}
                   <blockquote>{encounter.sentenceText}</blockquote>
                   {session?.guessText ? (
                     <div className="guess-note"><span>当时的猜测</span><p>{session.guessText}</p></div>

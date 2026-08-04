@@ -2,6 +2,8 @@ import { type ChangeEvent, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { BookOpenText, Download, HardDrive, Smartphone, Upload, Volume2 } from 'lucide-react'
 import { dictionaryAttribution } from '../../dictionary/dictionary-service'
+import { speakEnglish, type EnglishAccent } from '../../dictionary/pronunciation'
+import { useSpeechVoices } from '../../dictionary/useSpeechVoices'
 import {
   exportArchive,
   isLearningArchive,
@@ -12,6 +14,7 @@ import {
 
 export function SettingsPage() {
   const settings = useLiveQuery(() => libraryRepository.getSettings(), [])
+  const voices = useSpeechVoices()
   const inputRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -63,6 +66,21 @@ export function SettingsPage() {
   }
 
   if (!settings) return <div className="page-loading">正在读取本地设置…</div>
+
+  const pronunciationRate = settings.pronunciationRate ?? 0.96
+  const voicesFor = (accent: EnglishAccent) => {
+    const exact = voices.filter((voice) => voice.lang.toLowerCase() === accent.toLowerCase())
+    return exact.length ? exact : voices
+  }
+  const preview = (accent: EnglishAccent) => {
+    const voiceURI = accent === 'en-GB'
+      ? settings.pronunciationVoiceGb
+      : settings.pronunciationVoiceUs
+    speakEnglish('A clear voice makes reading easier.', accent, {
+      voiceURI,
+      rate: pronunciationRate,
+    })
+  }
 
   return (
     <div className="settings-page page-stack">
@@ -123,8 +141,53 @@ export function SettingsPage() {
         <p className="settings-copy">
           收录约 {dictionaryAttribution.entryCount.toLocaleString('zh-CN')} 个常用英汉学习词条，按字母小块加载并缓存。词典给出一般含义；只有专门策划的表达会判断当前语境并连接核心概念。
         </p>
+        <div className="voice-settings" id="pronunciation">
+          <div className="voice-settings__intro">
+            <div><strong>发音声音</strong><small>选择这台设备里听起来最自然的英语声音</small></div>
+            <span>{voices.length ? `找到 ${voices.length} 个英语声音` : '使用系统默认声音'}</span>
+          </div>
+          <div className="voice-setting-grid">
+            {(['en-GB', 'en-US'] as const).map((accent) => {
+              const settingKey = accent === 'en-GB' ? 'pronunciationVoiceGb' : 'pronunciationVoiceUs'
+              const selected = settings[settingKey] ?? ''
+              const choices = voicesFor(accent)
+              const selectedAvailable = !selected || choices.some((voice) => voice.voiceURI === selected)
+              return (
+                <label key={accent}>
+                  <span><strong>{accent === 'en-GB' ? '英式声音' : '美式声音'}</strong><small>{accent}</small></span>
+                  <select
+                    value={selected}
+                    onChange={(event) => void updateSettings({ [settingKey]: event.target.value || undefined })}
+                  >
+                    <option value="">自动选择较自然的声音</option>
+                    {!selectedAvailable && <option value={selected}>原设备的声音（当前不可用）</option>}
+                    {choices.map((voice) => (
+                      <option key={voice.voiceURI} value={voice.voiceURI}>
+                        {voice.name} · {voice.lang}{voice.localService ? ' · 本机' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="voice-preview" type="button" onClick={() => preview(accent)}>
+                    <Volume2 size={16} /> 试听
+                  </button>
+                </label>
+              )
+            })}
+          </div>
+          <label className="voice-rate">
+            <span><strong>语速</strong><small>{Math.round(pronunciationRate * 100)}%</small></span>
+            <input
+              type="range"
+              min="0.85"
+              max="1.1"
+              step="0.05"
+              value={pronunciationRate}
+              onChange={(event) => void updateSettings({ pronunciationRate: Number(event.target.value) })}
+            />
+          </label>
+        </div>
         <p className="settings-copy dictionary-settings-note">
-          <Volume2 size={17} /> 发音由手机或电脑的系统语音提供。UK / US 会优先选择对应口音；设备未安装相应语音时，实际声音可能使用系统最接近的英文语音。
+          <Volume2 size={17} /> 默认语速已调整得更接近正常说话。可用声音由手机或电脑决定；更换设备后，声音名称可能不同，需要重新选择。
         </p>
         <p className="settings-copy">
           词典数据：<a href={dictionaryAttribution.url} target="_blank" rel="noreferrer">{dictionaryAttribution.name}</a> · {dictionaryAttribution.license} License。不是牛津词典原文。
@@ -183,7 +246,7 @@ export function SettingsPage() {
 
       <footer className="settings-footer">
         <span className="wordmark__seal">Fx</span>
-        <p>Dedicated to Fx · Version 0.6<br />No account. No tracking. No API key.</p>
+        <p>Dedicated to Fx · Version 0.7<br />No account. No tracking. No API key.</p>
       </footer>
     </div>
   )

@@ -3,6 +3,7 @@ import {
   applyPracticeEvidence,
   applyRereadEvidence,
   createLearningSummary,
+  rebuildLearningSummary,
 } from '../domain/learning'
 import { prepareImportedArticle, type ArticleImportDraft } from '../domain/article-import'
 import { canonicalCandidates } from '../domain/expression-match'
@@ -20,6 +21,7 @@ import type {
   PracticeAttempt,
 } from '../domain/models'
 import { db } from './database'
+import { defaultPronunciationRate, migrateSettingsToVersion3 } from './migrations'
 
 const now = () => new Date().toISOString()
 const createId = (prefix: string) => prefix + '-' + crypto.randomUUID()
@@ -29,6 +31,7 @@ const defaultSettings: AppSettings = {
   textScale: 1,
   lineHeight: 1.82,
   reduceMotion: false,
+  pronunciationRate: defaultPronunciationRate,
 }
 
 export async function initialiseLibrary() {
@@ -58,7 +61,10 @@ export const libraryRepository = {
     db.explorationSessions.where('encounterId').equals(encounterId).last(),
   getUnit: (id: string) => db.learningUnits.get(id),
   getConcept: (id: string) => db.concepts.get(id),
-  getSettings: () => db.settings.get('singleton'),
+  getSettings: async () => {
+    const settings = await db.settings.get('singleton')
+    return settings ? migrateSettingsToVersion3(settings) : undefined
+  },
 }
 
 export async function importArticle(draft: ArticleImportDraft) {
@@ -280,6 +286,48 @@ export async function beginExploration(input: {
   return encounter.id
 }
 
+export async function deleteUnderstandingTrace(encounterId: string) {
+  return db.transaction(
+    'rw',
+    db.encounters,
+    db.explorationSessions,
+    db.practiceAttempts,
+    db.learningSummaries,
+    async () => {
+      const encounter = await db.encounters.get(encounterId)
+      if (!encounter) return false
+
+      await db.explorationSessions.where('encounterId').equals(encounterId).delete()
+      await db.practiceAttempts.where('encounterId').equals(encounterId).delete()
+      await db.encounters.delete(encounterId)
+
+      if (encounter.expressionConceptId) {
+        const remainingEncounters = await db.encounters
+          .where('expressionConceptId')
+          .equals(encounter.expressionConceptId)
+          .toArray()
+        const remainingIds = new Set(remainingEncounters.map((item) => item.id))
+        const remainingSessions = (await db.explorationSessions.toArray())
+          .filter((session) => remainingIds.has(session.encounterId))
+        const remainingAttempts = await db.practiceAttempts
+          .where('expressionConceptId')
+          .equals(encounter.expressionConceptId)
+          .toArray()
+        const rebuilt = rebuildLearningSummary(
+          encounter.expressionConceptId,
+          remainingEncounters,
+          remainingSessions,
+          remainingAttempts,
+        )
+        if (rebuilt) await db.learningSummaries.put(rebuilt)
+        else await db.learningSummaries.delete(encounter.expressionConceptId)
+      }
+
+      return true
+    },
+  )
+}
+
 export async function saveGuess(sessionId: string, text: string) {
   const session = await db.explorationSessions.get(sessionId)
   if (!session) return
@@ -360,7 +408,8 @@ export async function savePracticeAttempt(input: {
 }
 
 export async function updateSettings(patch: Partial<AppSettings>) {
-  const existing = (await db.settings.get('singleton')) ?? defaultSettings
+  const stored = await db.settings.get('singleton')
+  const existing = stored ? migrateSettingsToVersion3(stored) : defaultSettings
   await db.settings.put({ ...existing, ...patch, id: 'singleton' })
 }
 
@@ -368,7 +417,7 @@ export async function exportArchive(): Promise<LearningArchive> {
   const archive: LearningArchive = {
     format: 'dedicated-to-fx-backup',
     schemaVersion: 3,
-    appVersion: '0.6.0',
+    appVersion: '0.7.0',
     exportedAt: now(),
     data: {
       progress: await db.articleProgress.toArray(),
@@ -485,7 +534,8 @@ export async function restoreArchive(archive: LearningArchive) {
       await db.practiceAttempts.bulkAdd(archive.data.attempts)
       await db.learningSummaries.bulkAdd(archive.data.summaries)
       await db.settings.bulkPut(
-        archive.data.settings.length ? archive.data.settings : [defaultSettings],
+        (archive.data.settings.length ? archive.data.settings : [defaultSettings])
+          .map(migrateSettingsToVersion3),
       )
       await db.journalEntries.bulkAdd(archive.data.journalEntries ?? [])
       await db.habits.bulkAdd(archive.data.habits ?? [])

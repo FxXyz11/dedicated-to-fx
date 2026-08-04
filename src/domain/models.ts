@@ -162,6 +162,9 @@ export interface AppSettings {
   textScale: number
   lineHeight: number
   reduceMotion: boolean
+  pronunciationVoiceGb?: string
+  pronunciationVoiceUs?: string
+  pronunciationRate?: number
   lastBackupAt?: ISODate
 }
 

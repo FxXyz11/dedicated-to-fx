@@ -14,6 +14,7 @@ import type {
   PlanItem,
   PracticeAttempt,
 } from '../domain/models'
+import { migrateSettingsToVersion3 } from './migrations'
 
 export class DedicatedDatabase extends Dexie {
   articles!: EntityTable<Article, 'id'>
@@ -48,6 +49,11 @@ export class DedicatedDatabase extends Dexie {
       habits: 'id, createdAt, order, archivedAt',
       habitCompletions: 'id, habitId, dateKey, completedAt, [habitId+dateKey]',
       plans: 'id, status, targetDate, createdAt, updatedAt',
+    })
+    this.version(3).upgrade(async (transaction) => {
+      await transaction.table<AppSettings>('settings').toCollection().modify((settings) => {
+        Object.assign(settings, migrateSettingsToVersion3(settings))
+      })
     })
   }
 }
