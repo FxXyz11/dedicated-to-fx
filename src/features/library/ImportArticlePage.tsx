@@ -41,7 +41,7 @@ export function ImportArticlePage() {
         setMessage(result.error)
         return
       }
-      setMessage(`文章已保存在本机，共约 ${result.wordCount} 个英文词。`)
+      setMessage(`文章已保存在本机，共约 ${result.wordCount} 个英文词。现在可以点词查看发音和基础学习词典。`)
       setImportedId(result.article.id)
     } catch {
       setMessage('这次导入没有完成，请稍后再试。')
@@ -105,8 +105,9 @@ export function ImportArticlePage() {
             <label className="visually-hidden" htmlFor="article-text">英文正文</label>
             <textarea id="article-text" value={text} maxLength={60000} placeholder={'Paste the complete English article here.\n\nUse a blank line between paragraphs.'} onChange={(event) => setText(event.target.value)} />
             <div className="import-guidance">
-              <p><strong>导入后可以：</strong>离线阅读、记录进度、点击表达写下语境猜测，并进入每日推荐。</p>
-              <p><strong>解释范围：</strong>只有命中已有核心概念的表达会显示概念提示；其他表达不会自动生成翻译或伪造讲解。</p>
+              <p><strong>导入后可以：</strong>离线阅读、记录进度、点击单词播放英式/美式发音，并进入每日推荐。</p>
+              <p><strong>词典范围：</strong>普通单词会逐层显示基础英文释义与中文辅助；已策划表达还会提供当前语境和核心概念。姓名、拼写错误或极少见的专业词可能没有词条。</p>
+              <p><strong>离线说明：</strong>词库按小块下载。某类单词联网查询过一次后会缓存到手机；尚未下载的词库在完全离线时暂时无法查询。</p>
             </div>
             <button className="primary-button" type="submit" disabled={busy || !title.trim() || !text.trim()}>
               <BookOpen size={18} /> {busy ? '正在保存…' : '保存到文章库'}

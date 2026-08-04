@@ -8,6 +8,8 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, BookOpenCheck, ChevronRight, SlidersHorizontal, X } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { PronunciationControls } from '../../components/ui/PronunciationControls'
+import { lookupDictionaryEntry } from '../../dictionary/dictionary-service'
 import {
   beginExploration,
   completeArticle,
@@ -16,6 +18,7 @@ import {
   saveReadingPosition,
   updateSettings,
 } from '../../db/repository'
+import type { DictionaryLookup } from '../../domain/dictionary'
 import type { ArticleBlock, LearningUnit } from '../../domain/models'
 
 interface Selection {
@@ -133,10 +136,24 @@ function SelectionSheet({
   busy: boolean
 }) {
   const actionRef = useRef<HTMLButtonElement>(null)
+  const [dictionary, setDictionary] = useState<DictionaryLookup>({ status: 'loading' })
 
   useEffect(() => {
     actionRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    let active = true
+    setDictionary({ status: 'loading' })
+    void lookupDictionaryEntry(selection.text).then((result) => {
+      if (active) setDictionary(result)
+    })
+    return () => {
+      active = false
+    }
+  }, [selection.text])
+
+  const dictionaryEntry = dictionary.status === 'found' ? dictionary.entry : undefined
 
   return (
     <div className="sheet-backdrop" role="presentation" onMouseDown={onClose}>
@@ -152,11 +169,22 @@ function SelectionSheet({
         </button>
         <p className="eyebrow">{selection.unit ? 'A guided expression' : 'A personal trace'}</p>
         <h2 id="selection-title">{selection.text}</h2>
+        <PronunciationControls
+          text={selection.text}
+          phonetic={dictionaryEntry?.phonetic}
+          compact
+        />
         <blockquote>{selection.sentence}</blockquote>
         <p className="selection-sheet__note">
           {selection.unit
             ? '这里有一条渐进式探索路径。答案不会马上出现。'
-            : '这条表达尚无策划讲解。你仍可以保存自己的猜测和原句。'}
+            : dictionary.status === 'found'
+              ? '找到基础学习词典。先写下猜测，之后再逐层查看英文解释与中文辅助。'
+              : dictionary.status === 'offline'
+                ? '基础词典还没有缓存到本机。联网查询一次后，这一词库分片可以离线复用。'
+                : dictionary.status === 'not_found'
+                  ? '这可能是姓名、专有名词或很少见的词；仍可保存自己的猜测与原句。'
+                  : '正在查找基础学习词典…'}
         </p>
         <button
           className="primary-button primary-button--wide"

@@ -45,7 +45,22 @@ export default defineConfig({
       workbox: {
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,png,ico,jpg,webp,json}']
+        globPatterns: ['**/*.{js,css,html,png,ico,jpg,webp,json}'],
+        globIgnores: ['dictionary/**/*.json'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/dictionary\/[a-z_]{2}\.json$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fx-learning-dictionary-v1',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: {
+                maxEntries: 600,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+            },
+          },
+        ],
       },
       devOptions: {
         enabled: true

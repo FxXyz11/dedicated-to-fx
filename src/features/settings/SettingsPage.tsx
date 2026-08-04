@@ -1,6 +1,7 @@
 import { type ChangeEvent, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Download, HardDrive, Smartphone, Upload } from 'lucide-react'
+import { BookOpenText, Download, HardDrive, Smartphone, Upload, Volume2 } from 'lucide-react'
+import { dictionaryAttribution } from '../../dictionary/dictionary-service'
 import {
   exportArchive,
   isLearningArchive,
@@ -113,6 +114,25 @@ export function SettingsPage() {
 
       <section className="settings-section">
         <div className="settings-section__title">
+          <span className="settings-icon"><BookOpenText size={20} /></span>
+          <div>
+            <p className="eyebrow">Learning dictionary</p>
+            <h2>离线优先的点词解释</h2>
+          </div>
+        </div>
+        <p className="settings-copy">
+          收录约 {dictionaryAttribution.entryCount.toLocaleString('zh-CN')} 个常用英汉学习词条，按字母小块加载并缓存。词典给出一般含义；只有专门策划的表达会判断当前语境并连接核心概念。
+        </p>
+        <p className="settings-copy dictionary-settings-note">
+          <Volume2 size={17} /> 发音由手机或电脑的系统语音提供。UK / US 会优先选择对应口音；设备未安装相应语音时，实际声音可能使用系统最接近的英文语音。
+        </p>
+        <p className="settings-copy">
+          词典数据：<a href={dictionaryAttribution.url} target="_blank" rel="noreferrer">{dictionaryAttribution.name}</a> · {dictionaryAttribution.license} License。不是牛津词典原文。
+        </p>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-section__title">
           <span className="settings-icon"><Download size={20} /></span>
           <div>
             <p className="eyebrow">Data ownership</p>
@@ -163,7 +183,7 @@ export function SettingsPage() {
 
       <footer className="settings-footer">
         <span className="wordmark__seal">Fx</span>
-        <p>Dedicated to Fx · Version 0.4<br />No account. No tracking. No API key.</p>
+        <p>Dedicated to Fx · Version 0.5<br />No account. No tracking. No API key.</p>
       </footer>
     </div>
   )

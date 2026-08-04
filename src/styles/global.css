@@ -1212,12 +1212,58 @@ input[type="range"] {
 }
 
 .selection-sheet h2 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.65rem;
   color: var(--moss-deep);
   font-family: var(--serif);
   font-size: 3rem;
   font-weight: 400;
   font-style: italic;
+}
+
+.pronunciation {
+  display: flex;
+  margin: 0.8rem 0 1.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.pronunciation--compact {
+  margin-top: 0;
+}
+
+.pronunciation__phonetic {
+  color: var(--moss);
+  font-family: var(--serif);
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.pronunciation__actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.pronunciation__actions button {
+  display: inline-flex;
+  min-width: 58px;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: var(--moss-deep);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.pronunciation__actions button:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .selection-sheet blockquote,
@@ -1337,6 +1383,10 @@ input[type="range"] {
   background: var(--moss);
 }
 
+.step-rail--basic {
+  grid-template-columns: repeat(6, 1fr);
+}
+
 .explore-step {
   display: grid;
   padding: 2.3rem 0;
@@ -1422,6 +1472,65 @@ input[type="range"] {
   color: var(--moss);
   font-size: clamp(1.8rem, 4vw, 2.8rem) !important;
   font-style: italic;
+}
+
+.dictionary-meaning-list {
+  display: grid;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  gap: 0.65rem;
+  list-style: none;
+}
+
+.dictionary-meaning-list li {
+  padding: 0.85rem 1rem;
+  color: var(--ink-soft);
+  border-left: 2px solid var(--clay);
+  background: rgba(255, 255, 255, 0.35);
+  font-family: var(--serif);
+  line-height: 1.65;
+}
+
+.dictionary-meaning-list--english li {
+  color: var(--moss-deep);
+  border-left-color: var(--moss);
+  font-size: 1.02rem;
+}
+
+.dictionary-boundary {
+  margin: 1.2rem 0 0.8rem;
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.dictionary-source {
+  color: var(--ink-faint);
+  font-size: 0.65rem;
+}
+
+.dictionary-source a {
+  color: var(--moss);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dictionary-settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.dictionary-settings-note svg {
+  min-width: 17px;
+  margin-top: 0.2rem;
+  color: var(--moss);
+}
+
+.settings-copy a {
+  color: var(--moss);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .explore-step details {

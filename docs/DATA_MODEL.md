@@ -24,8 +24,17 @@
 - 上下文线索、英文解释、核心概念和相关语境。
 - 迁移练习题面与参考反馈。
 - 来源、许可和内容版本。
+- 开放许可基础学习词典的静态分片：规范词形、音标、一般词性、简明英文释义、中文辅助与词形关系。
 
 内容数据可以随应用更新，但更新必须按 contentVersion 管理。
+
+基础词典是可重新下载的静态内容，不是用户学习记录：
+
+- 不写入业务 Dexie 表，也不进入个人 JSON 备份。
+- 前缀分片首次查询时从 GitHub Pages 同源静态资源获取，并由 Service Worker Cache Storage 按版本缓存。
+- 缓存缺失或被系统清理不会删除 Encounter、猜测或文章，只会让未缓存词条暂时需要联网重新获取。
+- DictionaryEntry 只表示一般词典信息，不与 LearningUnit、Contextual Meaning 或 ExpressionConcept 合并成同一实体。
+- 词典来源、许可证、构建筛选规则和数据版本必须随发布保留。
 
 ### 2.2 用户数据 User Data
 

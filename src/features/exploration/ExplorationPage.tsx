@@ -2,13 +2,22 @@ import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, ArrowRight, Check, CircleHelp, CornerDownLeft, Layers3 } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { PronunciationControls } from '../../components/ui/PronunciationControls'
+import { dictionaryAttribution, lookupDictionaryEntry } from '../../dictionary/dictionary-service'
 import {
   libraryRepository,
   revealLevel,
   saveGuess,
   savePracticeAttempt,
 } from '../../db/repository'
-import type { HintLevel } from '../../domain/models'
+import type { DictionaryLookup } from '../../domain/dictionary'
+import type {
+  Article,
+  Encounter,
+  ExplorationSession,
+  ExpressionConcept,
+  HintLevel,
+} from '../../domain/models'
 
 const nextLabels: Record<number, string> = {
   1: '给我一个语境线索',
@@ -20,12 +29,196 @@ const nextLabels: Record<number, string> = {
   7: '尝试迁移',
 }
 
+const basicNextLabels: Record<number, string> = {
+  1: '先检查原句线索',
+  2: '看看词形与词性',
+  3: '用简单英文靠近它',
+  4: '查看中文辅助',
+  5: '连接已有核心概念',
+}
+
+function BasicDictionaryExploration({
+  article,
+  encounter,
+  session,
+  concept,
+  dictionary,
+  guess,
+  setGuess,
+  returnToReading,
+}: {
+  article: Article
+  encounter: Encounter
+  session: ExplorationSession
+  concept?: ExpressionConcept
+  dictionary: DictionaryLookup
+  guess: string
+  setGuess: (value: string) => void
+  returnToReading: () => Promise<void>
+}) {
+  const entry = dictionary.status === 'found' ? dictionary.entry : undefined
+  const maxLevel = concept ? 6 : 5
+  const level = Math.min(session.highestRevealedLevel, maxLevel)
+
+  const revealNext = async () => {
+    if (level === 1) await saveGuess(session.id, guess)
+    if (level < maxLevel) await revealLevel(session.id, (level + 1) as HintLevel)
+  }
+
+  return (
+    <div className="exploration-page">
+      <header className="explore-toolbar">
+        <button className="icon-button" type="button" onClick={() => void returnToReading()} aria-label="返回文章">
+          <ArrowLeft size={21} />
+        </button>
+        <span>{article.title}</span>
+        <span className="step-count">{entry ? `${level} / ${maxLevel}` : 'Personal note'}</span>
+      </header>
+      <main className="explore-column">
+        <header className="explore-intro">
+          <p className="eyebrow">Explore with a learning dictionary</p>
+          <h1>{entry?.headword ?? encounter.selectedText}</h1>
+          <PronunciationControls text={encounter.selectedText} phonetic={entry?.phonetic} />
+          <blockquote className="source-sentence">{encounter.sentenceText}</blockquote>
+          {entry && (
+            <div
+              className="step-rail step-rail--basic"
+              style={{ gridTemplateColumns: `repeat(${maxLevel}, 1fr)` }}
+              aria-label={`已展开 ${level} 个提示层级`}
+            >
+              {Array.from({ length: maxLevel }, (_, index) => (
+                <span className={index + 1 <= level ? 'is-filled' : ''} key={index} />
+              ))}
+            </div>
+          )}
+        </header>
+
+        <section className="explore-step is-open">
+          <div className="step-index">01</div>
+          <div>
+            <p className="eyebrow">Your sense</p>
+            <h2>它在这里可能做了什么？</h2>
+            <textarea
+              value={guess}
+              onChange={(event) => setGuess(event.target.value)}
+              onBlur={() => void saveGuess(session.id, guess)}
+              placeholder="可以使用英文、中文，或不完整的想法。"
+            />
+            {dictionary.status === 'loading' && <p className="field-note">正在查找本地学习词典…</p>}
+            {dictionary.status === 'offline' && (
+              <p className="field-note">这一词库分片还未缓存。联网查询一次后，可以在本机离线复用。</p>
+            )}
+            {dictionary.status === 'not_found' && (
+              <p className="field-note">没有找到可靠词条。它可能是姓名、专有名词、拼写变体或生僻专业词；系统不会伪造解释。</p>
+            )}
+          </div>
+        </section>
+
+        {entry && level >= 2 && (
+          <section className="explore-step is-open">
+            <div className="step-index">02</div>
+            <div>
+              <p className="eyebrow">Context clues</p>
+              <h2>先不看答案，再读一次原句。</h2>
+              <ul className="clue-list">
+                <li><CircleHelp size={18} />这个词前后分别连接了什么？</li>
+                <li><CircleHelp size={18} />它更像动作、事物、性质，还是连接关系？</li>
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {entry && level >= 3 && (
+          <section className="explore-step is-open">
+            <div className="step-index">03</div>
+            <div>
+              <p className="eyebrow">Word form & part of speech</p>
+              <h2>{entry.matchedForm === entry.headword ? entry.headword : `${entry.matchedForm} → ${entry.headword}`}</h2>
+              <PronunciationControls text={encounter.selectedText} phonetic={entry.phonetic} />
+              <div className="grammar-grid">
+                {(entry.partsOfSpeech.length ? entry.partsOfSpeech : ['part of speech not labelled'])
+                  .map((item) => <span key={item}>{item}</span>)}
+              </div>
+              <p className="field-note">这里显示的是词典中的一般词性，不代表系统已经判断出它在当前句中的具体用法。</p>
+            </div>
+          </section>
+        )}
+
+        {entry && level >= 4 && (
+          <section className="explore-step is-open">
+            <div className="step-index">04</div>
+            <div>
+              <p className="eyebrow">Simple English</p>
+              <h2>Common dictionary possibilities</h2>
+              {entry.definitions.length ? (
+                <ul className="dictionary-meaning-list dictionary-meaning-list--english">
+                  {entry.definitions.map((definition) => <li key={definition}>{definition}</li>)}
+                </ul>
+              ) : (
+                <p className="muted-copy">这个词条暂时只有中文辅助，没有可靠的简明英文释义。</p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {entry && level >= 5 && (
+          <section className="explore-step explore-step--meaning is-open">
+            <div className="step-index">05</div>
+            <div>
+              <p className="eyebrow">Chinese support</p>
+              <h2>这些是常见含义，不是本句的自动答案。</h2>
+              {entry.translations.length ? (
+                <ul className="dictionary-meaning-list">
+                  {entry.translations.map((translation) => <li key={translation}>{translation}</li>)}
+                </ul>
+              ) : (
+                <p className="muted-copy">这个词条暂时没有中文辅助。</p>
+              )}
+              <p className="dictionary-boundary">请回到原句，结合主语、宾语和上下文判断哪一种可能成立。</p>
+              <small className="dictionary-source">
+                基础数据：<a href={dictionaryAttribution.url} target="_blank" rel="noreferrer">{dictionaryAttribution.name}</a> · {dictionaryAttribution.license}
+              </small>
+            </div>
+          </section>
+        )}
+
+        {entry && concept && level >= 6 && (
+          <section className="explore-step explore-step--concept is-open">
+            <div className="step-index">06</div>
+            <div>
+              <p className="eyebrow"><Layers3 size={15} /> Known core concept</p>
+              <h2>{concept.coreConceptEn}</h2>
+              <p className="concept-zh">{concept.coreConceptZh}</p>
+              <div className="mental-model">{concept.mentalModel}</div>
+              <p className="boundary-note">核心概念帮助连接语境，但不能代替对当前句子的判断。</p>
+            </div>
+          </section>
+        )}
+
+        {entry && level < maxLevel ? (
+          <button className="primary-button primary-button--wide next-layer" type="button" onClick={() => void revealNext()}>
+            {basicNextLabels[level]} <ArrowRight size={18} />
+          </button>
+        ) : (
+          <button className="primary-button primary-button--wide next-layer" type="button" onClick={() => void returnToReading()}>
+            保存并回到原文 <CornerDownLeft size={18} />
+          </button>
+        )}
+        <button className="return-link" type="button" onClick={() => void returnToReading()}>
+          暂时不继续，保留进度并回到文章
+        </button>
+      </main>
+    </div>
+  )
+}
+
 export function ExplorationPage() {
   const { encounterId = '' } = useParams()
   const navigate = useNavigate()
   const [guess, setGuess] = useState('')
   const [selectedChoice, setSelectedChoice] = useState<string>()
   const [practiceResult, setPracticeResult] = useState<boolean>()
+  const [dictionary, setDictionary] = useState<DictionaryLookup>({ status: 'loading' })
 
   const data = useLiveQuery(async () => {
     const encounter = await libraryRepository.getEncounter(encounterId)
@@ -44,6 +237,19 @@ export function ExplorationPage() {
   useEffect(() => {
     if (data?.session?.guessText) setGuess(data.session.guessText)
   }, [data?.session?.guessText])
+
+  const lookupText = data?.encounter.selectedText
+  useEffect(() => {
+    if (!lookupText) return
+    let active = true
+    setDictionary({ status: 'loading' })
+    void lookupDictionaryEntry(lookupText).then((result) => {
+      if (active) setDictionary(result)
+    })
+    return () => {
+      active = false
+    }
+  }, [lookupText])
 
   if (data === undefined) return <div className="page-loading">正在打开探索页…</div>
   if (!data?.session || !data.article) {
@@ -80,63 +286,22 @@ export function ExplorationPage() {
     setPracticeResult(correct)
   }
 
-  if (!unit || !concept) {
+  if (!unit) {
     return (
-      <div className="exploration-page">
-        <header className="explore-toolbar">
-          <button className="icon-button" type="button" onClick={() => void returnToReading()} aria-label="返回文章">
-            <ArrowLeft size={21} />
-          </button>
-          <span>{article.title}</span>
-          <span className="step-count">Personal note</span>
-        </header>
-        <main className="explore-column">
-          <p className="eyebrow">A personal trace</p>
-          <h1>{encounter.selectedText}</h1>
-          <blockquote className="source-sentence">{encounter.sentenceText}</blockquote>
-          <section className="explore-step is-open">
-            <div className="step-index">01</div>
-            <div>
-              <p className="eyebrow">Your sense</p>
-              <h2>它在这里可能做了什么？</h2>
-              <textarea
-                value={guess}
-                onChange={(event) => setGuess(event.target.value)}
-                placeholder="可以使用英文、中文，或不完整的想法。"
-              />
-              <p className="field-note">
-                这条表达尚无当前语境的策划讲解，因此系统不会用不可靠的即时翻译填补空白。
-              </p>
-            </div>
-          </section>
-          {concept && level < 6 && (
-            <button
-              className="secondary-button primary-button--wide"
-              type="button"
-              onClick={() => { void saveGuess(session.id, guess); void revealLevel(session.id, 6) }}
-            >
-              查看已有核心概念（不是本句翻译）
-            </button>
-          )}
-          {concept && level >= 6 && (
-            <section className="explore-step explore-step--concept is-open">
-              <div className="step-index">Concept</div>
-              <div>
-                <p className="eyebrow"><Layers3 size={15} /> Known core concept</p>
-                <h2>{concept.coreConceptEn}</h2>
-                <p className="concept-zh">{concept.coreConceptZh}</p>
-                <div className="mental-model">{concept.mentalModel}</div>
-                <p className="boundary-note">这只能帮助建立跨语境联系，不能替代对当前句子的判断。</p>
-              </div>
-            </section>
-          )}
-          <button className="primary-button" type="button" onClick={() => void returnToReading()}>
-            保存并回到原文 <CornerDownLeft size={18} />
-          </button>
-        </main>
-      </div>
+      <BasicDictionaryExploration
+        article={article}
+        encounter={encounter}
+        session={session}
+        concept={concept}
+        dictionary={dictionary}
+        guess={guess}
+        setGuess={setGuess}
+        returnToReading={returnToReading}
+      />
     )
   }
+
+  if (!concept) return <div className="page-loading">这条策划内容缺少核心概念。</div>
 
   return (
     <div className="exploration-page">
@@ -151,6 +316,10 @@ export function ExplorationPage() {
         <header className="explore-intro">
           <p className="eyebrow">Explore in context</p>
           <h1>{concept.canonicalForm}</h1>
+          <PronunciationControls
+            text={encounter.selectedText}
+            phonetic={dictionary.status === 'found' ? dictionary.entry.phonetic : undefined}
+          />
           <blockquote className="source-sentence">{unit.sentenceText}</blockquote>
           <div className="step-rail" aria-label={'已展开 ' + level + ' 个提示层级'}>
             {Array.from({ length: 8 }, (_, index) => (

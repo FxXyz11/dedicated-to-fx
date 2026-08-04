@@ -368,7 +368,7 @@ export async function exportArchive(): Promise<LearningArchive> {
   const archive: LearningArchive = {
     format: 'dedicated-to-fx-backup',
     schemaVersion: 3,
-    appVersion: '0.4.0',
+    appVersion: '0.5.0',
     exportedAt: now(),
     data: {
       progress: await db.articleProgress.toArray(),
